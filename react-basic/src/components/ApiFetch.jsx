@@ -1,46 +1,110 @@
 import React, { useState, useEffect } from 'react';
-// import axios from 'axios';
+import axios from 'axios';
 
 export const ApiFetch = () => {
-    const [posts, setPosts] = useState([]);
-    const [id, setId] = useState(1);
-    const [clicked, setClicked] = useState(false);
+    const [tasks, setTasks] = useState([]);
+    const [selectedTask, setSelectedTask] = useState([]);
+    const [editedTask, setEditedTask] = useState({id: '', title: ''});
+    const [id, setId] = useState(1)
 
     useEffect(() => {
-        // axios.get('https://jsonplaceholder.typicode.com/posts')
-        // .then(res => {
-        //     setPosts(res.data)
-        // });
+        axios.get('http://127.0.0.1:8000/api/tasks/', {
+            headers: {
+                'Authorization' : 'Token c12069539fbd4f9ad59b11446567e60bd313da92'
+            }
+        })
+        .then(res => {setTasks(res.data)})
+    },[]);
 
-        fetch(`https://jsonplaceholder.typicode.com/posts/${id}`, {method: 'GET'})
-        .then(res => res.json())
-        .then(data => {
-            setPosts(data);
-        });
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    },[clicked]);
+    const getTask = () => {
+        axios.get(`http://127.0.0.1:8000/api/tasks/${id}/`, {
+            headers: {
+                'Authorization' : 'Token c12069539fbd4f9ad59b11446567e60bd313da92'
+            }
+        })
+        .then(res => {setSelectedTask(res.data)})
 
-    const handlerClick = () => {
-        setClicked(!clicked);
-    };
+    }
 
-    const onChangeId = (e) => {
-        setId(e.target.value);
-    };
+    const deleteTask = (id) => {
+        axios.delete(`http://127.0.0.1:8000/api/tasks/${id}/`, {
+            headers: {
+                'Authorization' : 'Token c12069539fbd4f9ad59b11446567e60bd313da92'
+            }
+        })
+        .then(res => {setTasks(tasks.filter(task => task.id !== id)); setSelectedTask([])})
 
-  return (
+    }
+
+
+    const newTask = (task) => {
+        const data = {
+            title: task.title
+        }
+
+        axios.post(`http://127.0.0.1:8000/api/tasks/`, data, {
+            headers: {
+                'Content-Type' : 'application/json',
+                'Authorization' : 'Token c12069539fbd4f9ad59b11446567e60bd313da92'
+            }
+        })
+        .then(res => {setTasks([...tasks, res.data]); setEditedTask({id: '', title: ''})})
+
+    }
+
+    const editTask = (task) => {
+
+        axios.put(`http://127.0.0.1:8000/api/tasks/${task.id}/`,task, {
+            headers: {
+                'Content-Type' : 'application/json',
+                'Authorization' : 'Token c12069539fbd4f9ad59b11446567e60bd313da92'
+            }
+        })
+        .then(res => {setTasks(tasks.map(task => (task.id === editedTask.id ? res.data : task)));
+            setEditedTask({id: '', title: ''})
+        })
+
+    }
+
+    const handleInputChange = () => evt => {
+            const value = evt.target.value;
+            const name = evt.target.name;
+           setEditedTask({...editedTask, [name]:value})
+        }
+
+   return(
 
     <div>
-        <input type="text" value={id} onChange={onChangeId} />
-        <br />
-        <button onClick={handlerClick}>更新</button>
-        <br />
-        {posts.title}
-        {/* <ul>
-            {posts.map(post => <li key={post.id}>{post.title}</li>)}
+        <ul>
+            {
+                tasks.map((task, index) => <li key={index}> {task.title} {task.id}
+                    <button onClick={() => deleteTask(task.id)}>
+                        <i className='fas fa-trash-alt'></i>
+                    </button>
 
-        </ul> */}
+                    <button onClick={() => setEditedTask(task)}>
+                        <i className='fas fa-pen'></i>
+                    </button>
+                </li>)
+            }
+
+        </ul>
+
+        Set id <br />
+        <input type="text" value={id} onChange={evt => {setId(evt.target.value)}} />
+        <br />
+
+        <button onClick={() => getTask()}>Get</button>
+        <h3>{selectedTask.title} {selectedTask.id}</h3>
+
+        <input type="text" name='title' value={editedTask.title} onChange={handleInputChange()} placeholder="New Task ?" required />
+        {editedTask.id ? 
+        <button onClick={() => editTask(editedTask)}>Update</button> :
+        <button onClick={() => newTask(editedTask)}>Created</button> }
+
+        {/* <button onClick={() => deleteTask()}>Delete</button> */}
     </div>
-  )
+
+   )
 }
